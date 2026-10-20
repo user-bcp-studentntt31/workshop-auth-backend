@@ -11,11 +11,15 @@ import org.apache.commons.text.StringEscapeUtils;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 @Path("/auth")
 @Consumes(MediaType.APPLICATION_JSON)
 @Produces(MediaType.APPLICATION_JSON)
 public class AuthResource {
+    private static final Logger LOGGER = Logger.getLogger(AuthResource.class.getName());
+
     @Inject
     LegacyDatabase database;
 
@@ -32,30 +36,30 @@ public class AuthResource {
                     if (request.password == null || request.password.trim().isEmpty()) {
                         return Response.status(400).entity(Map.of("message", "Password is required")).build();
                     } else {
+                        if (request.client == null || request.client.trim().isEmpty()) {
+                            return Response.status(400).entity(Map.of("message", "Client is required")).build();
+                        }
                         UserRecord user = database.findByCredentials(request.username, request.password);
                         if (user == null) {
-                            return Response.status(401).entity(Map.of("message", "Invalid user " + request.username + " or password")).build();
+                            return Response.status(401).entity(Map.of("message", "Invalid credentials")).build();
                         } else {
-                            String token = LegacyTokenUtil.create(user.username(), user.role());
+                            String token = LegacyTokenUtil.create(user.username(), user.role(), request.client.trim());
                             Map<String, Object> response = new HashMap<>();
                             response.put("token", token);
-                            response.put("expiresIn", 3600);
+                            response.put("expiresIn", LegacyTokenUtil.expiresInSeconds());
                             response.put("user", Map.of(
                                     "username", user.username(),
                                     "displayName", StringEscapeUtils.escapeHtml4(user.displayName()),
                                     "role", user.role()
                             ));
-                            response.put("debug", "authenticated-with-legacy-flow");
                             return Response.ok(response).build();
                         }
                     }
                 }
             }
         } catch (Exception error) {
-            return Response.status(500).entity(Map.of(
-                    "message", error.getMessage() == null ? "Unknown error" : error.getMessage(),
-                    "exception", error.getClass().getName()
-            )).build();
+            LOGGER.log(Level.SEVERE, "Authentication failed due to internal error", error);
+            return Response.status(500).entity(Map.of("message", "Authentication service unavailable")).build();
         }
     }
 }
