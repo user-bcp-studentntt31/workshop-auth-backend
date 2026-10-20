@@ -27,3 +27,5 @@ Credenciales locales:
 ## Propósito de la rama `main`
 
 La rama contiene deuda técnica y de seguridad deliberada: SQL concatenado, contraseñas en texto plano, token reversible, secreto hardcodeado, CORS permisivo, método largo, manejo genérico de excepciones y dependencias con CVEs.
+
+> TEMP TEST LINE: verificar visualización de cambios en Copilot Chat.
